@@ -12,8 +12,8 @@ La práctica ha sido realizada individualmente por **Juan Luis Arróniz Cruz**
 
 ## Ficheros
 
-* **/data**: dataset utilizado en la práctica
 * **/code**: contiene el codigo R y los documentos generados durante la realización de la práctica.
+* **/data**: dataset utilizado en la práctica.
 
 ## Recursos Utilizados
 
