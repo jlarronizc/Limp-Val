@@ -1,0 +1,201 @@
+---
+title: "PrÃfÂ¡ctica 2 - Limpieza y validaciÃfÂ³n de los datos"
+author: "Juan Luis ArrÃfÂ³niz Cruz"
+date: "1 de junio de 2018"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+  html_document:
+    number_section: yes
+    toc: yes
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load_libraries, include=FALSE}
+library(knitr)
+library(lubridate)
+library(nortest)
+```
+
+```{r lectura, echo=FALSE}
+datos <- read.csv2(file = 'winequality-red.csv', dec = '.', header = TRUE)
+columnas <- names(datos)
+```
+
+****
+#Descripción del dataset
+****
+El conjunto de datos recoge información sobre el vino tinto portugues "Vinho Verde". Sólo se dispone de valores fisicoquimicos(entradas) y sensoriales (salida) de las variables disponibles, no hay datos acerca de tipos de uva, marca del vino, precio de venta, etc... La importancia de estos datos es que podemos relacionar la calidad del producto final con las distintas variables de las que disponemos. Este dataset contiene `r nrow(datos)` registros y  `r ncol(datos)` variables. Las variables son `r toString(columnas)`.
+
+****
+#Integración y selección de los datos de interés a analizar
+****
+En un primer momento, no podemos descartar ninguna variable del conjunto de datos ya que a priori no hay ninguna descartable sin un estudio previo.
+
+****
+#Limpieza de los datos
+****
+##Asignar a cada variable el tipo de dato adecuado
+```{r}
+res <- sapply(datos,class)
+kable(data.frame(variables=names(datos),class=as.vector(res)))
+```
+
+No haría falta la conversión de ninguna variable
+
+##Asignación de nuevos nombres a las columnas
+```{r}
+columnas <- names(datos)
+columnas
+names(datos)[1] = "Acidez_Fija"
+names(datos)[2] = "Acidez_Volatil"
+names(datos)[3] = "Acido_Citrico"
+names(datos)[4] = "Azucar_Residual"
+names(datos)[5] = "Cloruros"
+names(datos)[6] = "Dioxido_de_Azufre_Libre"
+names(datos)[7] = "Dioxido_de_Azufre_Total"
+names(datos)[8] = "Densidad"
+names(datos)[10] = "Sulfatos"
+names(datos)[11] = "Alcohol"
+names(datos)[12] = "Calidad"
+
+columnas <- names(datos)
+columnas
+```
+## Ceros y elementos vacíos
+```{r}
+sapply(datos, function(x) sum(is.na(x)))
+```
+Observamos que no hay valores vacíos o ceros
+
+## Valores extremos
+Visualizamos los datos por medio de un diagrama de caja
+```{r}
+boxplot(datos$Acidez_Fija)
+boxplot(datos$Acidez_Volatil)
+boxplot(datos$Acido_Citrico)
+boxplot(datos$Azucar_Residual)
+boxplot(datos$Cloruros)
+boxplot(datos$Dioxido_de_Azufre_Libre)
+boxplot(datos$Dioxido_de_Azufre_Total)
+boxplot(datos$Densidad)
+boxplot(datos$pH)
+boxplot(datos$Sulfatos)
+boxplot(datos$Alcohol)
+boxplot(datos$Calidad)
+```
+
+Visualizamos los datos concretos
+```{r}
+boxplot.stats(datos$Acidez_Fija)$out
+boxplot.stats(datos$Acidez_Volatil)$out
+boxplot.stats(datos$Acido_Citrico)$out
+boxplot.stats(datos$Azucar_Residual)$out
+boxplot.stats(datos$Cloruros)$out
+boxplot.stats(datos$Dioxido_de_Azufre_Libre)$out
+boxplot.stats(datos$Dioxido_de_Azufre_Total)$out
+boxplot.stats(datos$Densidad)$out
+boxplot.stats(datos$pH)$out
+boxplot.stats(datos$Sulfatos)$out
+boxplot.stats(datos$Alcohol)$out
+boxplot.stats(datos$Calidad)$out
+```
+Aunque en todas las variables se presentan valores extremos, vamos a dejarlos tal cual para poder estudiar como se comporta la calidad del producto final con la presencia de estos, si son influyentes o no.
+
+****
+#Análisis de los datos
+****
+## Seleccion de los grupos de datos a analizar
+```{r}
+summary(datos)
+table(datos$Calidad)
+```
+
+Como a priori no pudemos agrupar por ninguna variable vamos a interpredar en base a los datos que tenemos de la calidad, agrupando como malo los que tengan una calificación 4 o menor, normal entre 5 y 6, y bueno cuando sea mayor que 7
+```{r}
+vino.malo <- datos[datos$Calidad <= 4,]
+vino.normal <- datos[datos$Calidad > 4 & datos$Calidad < 7,]
+vino.bueno <- datos[datos$Calidad >= 7,]
+```
+
+## Comprobación de la normalidad y homogeneidad de la varianza
+Para saber si las variables están normalizadas aplicaremos el test de Shapiro Wilk para cada variable
+```{r}
+shapiro.test(datos$Acidez_Fija)
+shapiro.test(datos$Acidez_Volatil)
+shapiro.test(datos$Acido_Citrico)
+shapiro.test(datos$Azucar_Residual)
+shapiro.test(datos$Cloruros)
+shapiro.test(datos$Dioxido_de_Azufre_Libre)
+shapiro.test(datos$Dioxido_de_Azufre_Total)
+shapiro.test(datos$Densidad)
+shapiro.test(datos$pH)
+shapiro.test(datos$Sulfatos)
+shapiro.test(datos$Alcohol)
+shapiro.test(datos$Calidad)
+```
+Se aprecia que para cada variable su p-valor es inferior a 0.05 por lo que rechazamos la hipotesis nula y entendemos que las variables no son normales.
+
+Para estudiar la homogeneidad de la varianza aplicaremos el test de Fligner-killen, estudiaremos esta homogeneidad según los niveles de azucar frente a la calidad final de los vinos. 
+```{r}
+fligner.test(Azucar_Residual ~ Calidad, data = datos)
+```
+Se obserta que el p-valor es superior al 0.05, por lo que aceptamos la hipótesis de que las varianzas de ambas muestras son homogéneas.
+
+##Pruebas estadísticas
+Primeramente vamos a relizar un análisis de correlación de las distintas variables para determinar cual de ellas tienen más peso a la hora de establecer la calidad del vino. Nos basaremos en el coeficiente de correlación de Spearman puesto que no siguen una distribución normal los datos.
+```{r}
+corr <- matrix(nc = 2, nr = 0)
+colnames(corr) <- c("estimado","p-valor")
+
+for(i in 1:(ncol(datos)-1)){
+  test = cor.test(datos[,i],datos[,length(datos)],method = "spearman")
+  est = test$estimate
+  pval = test$p.value
+  
+  par = matrix(ncol = 2, nrow = 1)
+  par[1][1] = est
+  par[2][1] = pval
+  corr <- rbind(corr,par)
+  rownames(corr)[nrow(corr)] <- colnames(datos)[i]
+}
+
+print(corr)
+```
+A tenor de los datos obtenidos, podríamos aventurar que el Alcohol es la variable que más peso tiene a la hora establecer la calidad del vino, ya que es el más proximo a los valores 1 o -1
+
+Como siguiente prueba estadística vamos a realizar un contraste de hipótesis en el vamos a ver si un nivel superior de azucares determina una mayor calidad del vino,
+```{r}
+summary(datos$Azucar_Residual)
+```
+Vamos a crear dos grupos diferentes en función del nivel de azucar, que esten por debajo de la mediana y por encima
+
+```{r}
+mediana.azucar <- median(datos$Azucar_Residual)
+vino.bajo.azucar <- datos[datos$Azucar_Residual <= mediana.azucar,]$Calidad
+vino.alto.azucar <- datos[datos$Azucar_Residual > mediana.azucar,]$Calidad
+```
+
+A partir de estas dos muestras plantearemos el contraste de hipotesis, donde definimos como hipotesis nula que la calidad no se ve afectada por la cantidad de azucar y como alternativa que a un mayor nivel de azucar la calidad del vino es mayor.
+
+```{r}
+t.test (vino.bajo.azucar, vino.alto.azucar, alternative = "less")
+```
+Puesto que el p-valor obtenido es su perior a 0.05 aceptamos la hipótesis nula, en donde la calidad del vino se se ve afectada por la cantidad de azucar. Esto se ve reflajado en la pueba estadística anterior donde veíamos que el azucar tenia poco peso en la calidad. 
+
+****
+# Conclusiones
+****
+Se han realizado dos pruebas estadísticas sobre un conjunto de datos en donde se registran distintas variables que determinan la calidad del vino tinto portugues "Vinho Verde", este siendo determinado por expertos.
+
+El análisis de correlación nos a llevado a determinar que la calidad del vino se ve más influenciada por el Alcohol del mismo en deprimento del resto de variables, además hemos determinado por contraste de hipótesis que el azucar no influye en la caliadd del mismo, esto también corroborado por el por el análisis de correlación al tener este bajo peso de influencia.
+
+El preprocesado previo de los datos a sido mínimo ya que no se observaron valores perdidos ni ceros, por último los valores extremos se ha decidido dejarlos, ya que no se observar valores extraños sobre todo en la nivel de Alcohol que es el que más conocimiento se puede tener.
